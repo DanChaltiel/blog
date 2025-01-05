@@ -1,0 +1,15 @@
+---
+title: "Welcome To My Blog"
+author: "Dan Chaltiel"
+description: |
+  Here we go!
+date: "2025-01-04"
+categories: [news]
+image: "keep_calm.jpeg"
+image-alt: "Keep calm and use R"
+---
+
+I've been wanting to blog about R for a long time now, so here we go!
+
+I'm not sure where I'm going yet, but I think this will be the home of my little tutorials or simulation studies.
+![](keep_calm.jpeg)
