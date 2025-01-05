@@ -1,0 +1,26 @@
+project:
+  type: website
+
+website:
+  title: "Hello, R!"
+  description: "An R blog by Dan Chaltiel"
+  site-url: https://danchaltiel.github.io/blog/
+  repo-url: https://github.com/DanChaltiel/blog
+  open-graph: true
+  search: true
+  twitter-card:
+    creator: "@DanChaltiel"
+    card-style: summary_large_image
+  navbar:
+    right:
+      - about.qmd
+      - icon: github
+        href: https://github.com/
+      - icon: twitter
+        href: https://twitter.com
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+
