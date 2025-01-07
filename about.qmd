@@ -1,0 +1,29 @@
+---
+title: "Dan Chaltiel"
+image: images/profil2017.jpg
+about:
+  template: solana
+  links:
+    - icon: github
+      text: GitHub
+      href: https://github.com/DanChaltiel
+    - icon: bluesky
+      text: Bluesky
+      href: https://bsky.app/profile/danchaltiel.bsky.social
+    - icon: twitter
+      text: Twitter
+      href: https://x.com/DanChaltiel
+    - icon: linkedin
+      text: LinkedIn
+      href: https://www.linkedin.com/in/dan-chaltiel-b3240895
+---
+
+About me
+
+------------------------------------------------------------------------
+
+I'm just a programming nerd that ended up loving data analysis.
+
+I have a PharmD, and a PhD in Epidemiology, and I work as a biostatistician at the Gustave Roussy institute ([CESP Team Oncostat](https://github.com/Oncostat)).
+
+![](images/logo_gustaveroussy.png){width="236"} ![](images/logo_cesp.png){width="260"}

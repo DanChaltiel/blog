@@ -12,12 +12,21 @@ website:
     creator: "@DanChaltiel"
     card-style: summary_large_image
   navbar:
+    left:
+      - icon: rss
+        text: RSS
+        href: index.xml
     right:
-      - about.qmd
+      - text: About me
+        href: about.qmd
       - icon: github
-        href: https://github.com/
+        href: https://github.com/DanChaltiel
+      - icon: bluesky
+        href: https://bsky.app/profile/danchaltiel.bsky.social
       - icon: twitter
-        href: https://twitter.com
+        href: https://x.com/DanChaltiel
+      - icon: linkedin
+        href: https://www.linkedin.com/in/dan-chaltiel-b3240895
 
 format:
   html:
