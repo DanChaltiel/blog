@@ -8,6 +8,8 @@
 .quarto
 
 cache
+*draft*
 
 _site
 /.quarto/
+*.lnk
