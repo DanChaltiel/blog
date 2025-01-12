@@ -1,0 +1,583 @@
+---
+title: "Competing risks"
+description: |
+  What model should we use when competing risks arise?
+date: "2025-01-13"
+categories: [R, code, analysis, survival]
+image: "toystory.jpeg"
+image-alt: "Competing risks everywhere"
+
+execute:
+  echo: true
+  code-overflow: wrap
+  warnings: false
+  messages: false
+knitr:
+  opts_chunk: 
+    collapse: true
+    comment: "#>" 
+    R.options:
+      crosstable_compact: true
+      width: 105
+---
+
+```{r init}
+#| include: false
+library(tidyverse)
+library(cmprsk)
+library(survival)
+
+#replacement for broom::tidy() for multistate models
+tidy = function(fit){
+  x = broom::tidy(fit)
+  s = fit$states
+  s[1] = "Rando"
+  
+  x$term = x$term %>%
+    str_replace_all("(\\d):(\\d)", function(match) {
+      parts <- str_match(match, "(\\d):(\\d)")
+      first_digit <- as.numeric(parts[2])
+      second_digit <- as.numeric(parts[3])
+      paste0(s[first_digit], ":", s[second_digit])
+    })
+  x %>% 
+    separate(term, into=c("term", "transition"), sep="_")
+} 
+
+```
+
+::: {.callout-tip title="TL;DR"}
+Fine and Gray subdistribution model is designed for prediction and should not be used for causal analysis as it yields biased estimations of Hazard Ratios.
+:::
+
+## Introduction
+
+If you are fitting a survival analysis on an endpoint that is not death, there are chances that you will face the problem of competing risks at some point.
+
+The most known methods to address this problem are cause-specific censoring and Fine & Gray's subdistribution method, although multistate models are entering the game.
+
+Competing risks arise when an individual is at risk of experiencing multiple events of events, and the occurrence of one event precludes the occurrence of the others.
+
+For example, in clinical trials, a patient may be at risk of cancer progression (the primary event of interest) but could also die from unrelated causes before progression occurs, making progression no longer observable.
+
+Properly accounting for competing risks is crucial, as **standard survival methods like Kaplan-Meier can overestimate the probability of the event of interest** by ignoring other risks that "compete" with it.
+
+However, the 2 methods are not equivalent, and we are about to show in what.
+
+::: {.callout-note title="Disclaimer"}
+A lot of the logic presented here comes from [Paul Allison's SAS code on the Statistical Horizons blog](https://statisticalhorizons.com/for-causal-analysis-of-competing-risks/). I only wanted to reproduce his results in R and talk about multistate models.
+:::
+
+## Simulation
+
+### Data
+
+Let's simulate some data to show the problem:
+
+```{r data-function}
+#| code-fold: true
+#| code-summary: "Show the code for get_df()"
+library(tidyverse)
+
+#' Simulated dataset
+#' 
+#' Simulate 2 variables `x` and `z` with normal distribution and `r` correlation,
+#' and 2 Weibull times depending on either `x` or `z`, then let them censor each
+#' other to mimic competing risks.
+#'
+#' @param n number of observations
+#' @param r correlation between `x` and `z`
+#' @param beta the true coefficient for `x` and `z`
+#' @param eos non-informative censoring (end of study)
+#' @param inf_censoring informative censoring (common risk factor for `x` & `z`)
+#' @param seed RNG seed
+#' 
+get_df = function(n=10000, r=0.5, beta=0.5, eos=14, inf_censoring=FALSE, seed=NULL){
+  if(!is.null(seed)) set.seed(seed)
+  rtn = tibble(
+    id = seq(n),
+    # Generate a common risk factor if inf_censoring=TRUE
+    comrisk = inf_censoring * rnorm(n),
+    # Generate x and z, bivariate standard normal with r=.5
+    x = rnorm(n),
+    z = r*x + sqrt(1-r^2)*rnorm(n),
+    # Generate time_a (Weibull) depending on x with coefficient beta
+    logw = 2 + 1.5*(log(rexp(n)) - beta*x) + 2*comrisk,
+    time_a = exp(logw),
+    # Generate time_b (Weibull) depending on z with coefficient beta
+    logy = 2 + 1.5*(log(rexp(n)) - beta*z)+ 2*comrisk,
+    time_b = exp(logy),
+    # *Allow events to censor each other;
+    t = pmin(time_a, time_b, eos),
+    event_num = case_when(t>=eos~0, time_b>time_a~1, .default=2),
+    event = factor(event_num, 0:2, c("Censored", "Type A", "Type B")),
+  )
+  rtn %>% 
+    select(id, t, event, x, z, time_a, time_b)
+}
+```
+
+```{r data}
+df = get_df(n=10000, r=0.5, eos=8, inf_censoring=FALSE, seed=376)
+df
+```
+
+Here, we have a dataset with, for each patient `id`, an observed time `t` and the event associated. The time `t` is either equal to the smaller time between `time_a`, `time_b`, and the administrative censoring time that we set to `eos=8`.
+
+### Regression models
+
+OK, now let's use this dataset to fit cause-specific Cox and Fine & Gray models, one of each for both Type A and Type B events:
+
+```{r models-function}
+#| code-fold: true
+#| code-summary: "Show the code for get_models()"
+library(survival)
+
+get_models = function(df, variance=TRUE){
+  rtn = lst(
+    fg_a = cmprsk::crr(df$t, df$event, cbind(x=df$x, z=df$z), 
+                       failcode="Type A", cencode="Censored", variance=variance),
+    fg_b = cmprsk::crr(df$t, df$event, cbind(x=df$x, z=df$z), 
+                       failcode="Type B", cencode="Censored", variance=variance),
+    cox_a = coxph(Surv(t, event=="Type A") ~ x + z, data=df),
+    cox_b = coxph(Surv(t, event=="Type B") ~ x + z, data=df)
+  )
+  rtn
+}
+# cmprsk::crr can be long so we cache the result
+get_models = memoise::memoise(get_models, cache=cachem::cache_disk("cache"))
+get_df = memoise::memoise(get_df, cache=cachem::cache_disk("cache"))
+```
+
+```{r models}
+m = get_models(df)
+m %>% 
+  map(broom::tidy) %>% 
+  bind_rows(.id="model") %>% 
+  transmute(model, term, estimate, p.value=format.pval(p.value, eps=0.01)) %>% 
+  separate(model, into=c("model", "event")) %>% 
+  pivot_wider(names_from=model, values_from=c(estimate, p.value))
+```
+
+The true effect is 0.5 for couples `a/x` and `b/z`, and 0 for couples `a/z` and `b/x`.
+
+We can see that :
+
+-   Cause-specific Cox model has very little bias in coefficient estimates, and p-values reflect the true data structure
+-   Fine and Gray model underestimates the true effects and incorrectly assign a value for null coefficients.
+
+### Informative censoring
+
+We can do the same with informative censoring, i.e. if type A and type B events share a common, unobserved risk factor.
+
+```{r infcensor}
+df2 = get_df(n=10000, r=0.5, eos=8, inf_censoring=TRUE, seed=376)
+
+m2 = get_models(df2)
+m2 %>% 
+  map(broom::tidy) %>% 
+  bind_rows(.id="model") %>% 
+  transmute(model, term, estimate, p.value=format.pval(p.value, eps=0.01)) %>% 
+  separate(model, into=c("model", "event")) %>% 
+  pivot_wider(names_from=model, values_from=c(estimate, p.value))
+```
+
+Informative censoring is a known problem that is difficult to adress.
+
+As you can see, both model are now biased. However, the cause-specific Cox model still gives less biased estimates than the Fine and Gray model.
+
+## Conclusion
+
+Fine and Gray subdistribution model is designed for prediction and should not be used for causal analysis as it yields biased estimations of Hazard Ratios. If you intend to interpret Hazard Ratios or their p-values, you should better use cause-specific Cox models.
+
+## Bonus: Multistate models
+
+Another possibility is to use multistate models. For time-to-event data such as ours, the MultiState Hazard (MSH) model, implemented in package `survival`, is pretty much adapted as it is similar to the Cox model. See [the "compete" vignette](https://cran.r-project.org/web/packages/survival/vignettes/compete.pdf) for more insight.
+
+Fitting such a MSH model for competing risks is very straightforward: you use the `coxph()` function with `event` being a factor which first level should be the censoring.
+
+Our data is already constructed this way, so the code is:
+
+```{r multistate}
+library(survival)
+fit = coxph(Surv(t,event)~x+z, data=df, id=id)
+fit$transitions
+tidy(fit) %>% arrange(term)
+```
+
+As expected, we get the exact same coefficients as with the 2 separate cause-specific models.
+
+The interest about MSH models rises with plots, as the cause-specific Kaplan Meier estimator overestimates the risk in the presence of competing risks.
+
+To illustrate this, lets binarise our `x` and `y` variables on whether they are \>0.
+
+First, you can see that mere binarisation itself introduces a large amount of bias, with `x>0` being wrongly associated with Type B events, and `z>0` with Type A events.
+
+```{r ms-table}
+bin_fit = coxph(Surv(t,event)~(x>0)+(z>0), data=df, id=id)
+bin_fit %>% 
+  tidy() %>% 
+  select(term, transition, estimate, p.value)
+```
+
+Let's ignore that for a moment for the sake of the explanation. Here, we will only focus on the relationship between `x` and Type A events.
+
+Let's plot both the Kaplan Meier risk curve of the cause-specific Cox model and the cumulative incidence of the MSH model:
+
+```{r ms-km-plot}
+library(ggsurvfit)
+sfit_bad = survfit(Surv(t, event=="Type A") ~ (x > 0) + (z > 0), data=df, id=id)
+p_bad = ggsurvfit(sfit_bad[c(1,3)], type="risk") +
+  add_confidence_interval() +
+  scale_ggsurvfit(y_scales=list(limits=c(0,1))) + 
+  labs(title="Without competing risks", y="Incidence of Type A events")
+
+sfit_good = survfit(Surv(t, event) ~ (x > 0) + (z > 0),  data=df, id=id)
+p_good = ggcuminc(sfit_good[c(1,3),], outcome=c("Type A")) + 
+  add_confidence_interval() +
+  scale_ggsurvfit(y_scales=list(limits=c(0,1))) + 
+  labs(title="With competing risks", y="Incidence of Type A events")
+
+patchwork::wrap_plots(p_bad, p_good, guides="collect") & theme(legend.position="bottom")
+```
+
+As you can see, while the cause-specific censoring approach is valid with Cox models, it overestimates the risk in Kaplan Meier curves.
+
+## Bonus 2: Multiple simulation
+
+The first simulation is a nice proof of concept, but it is only one simulation on a very large sample.
+
+Let's run it multiple times, so that we can see the changes on type I and type II errors:
+
+```{r simu}
+#this chunk runs in about 30 minutes
+N_runs = 1000
+N_sample = 200
+data_list = seq(N_runs) %>% 
+  set_names(~paste0("seed",.x)) %>% 
+  map(.progress=TRUE, ~{
+    d = get_df(n=N_sample, seed=.x)
+  })
+
+model_df = data_list %>% 
+  map(.progress=TRUE, ~{
+    get_models(.x) %>% 
+      map(~broom::tidy(.x, conf.int=TRUE))%>% 
+      bind_rows(.id="model")
+  }) %>%
+  bind_rows(.id="seed") |> 
+  select(model, term, estimate, p.value, conf.low, conf.high) %>%
+  separate(model, into=c("model", "event")) %>%
+  mutate(
+    real_estimate = ifelse(paste0(event, term) %in% c("ax", "bz"), 0.5, 0),
+    .after=estimate
+  )
+
+model_df
+```
+
+Now, we can show that the **type I error** is kept to the prespecified alpha=5% for CS-Cox models while **it rises to 55% for F&G models!**
+
+The difference is less important for the **type II error**: for a true coefficient of 0.5, we have a statistical power of 98% for CS-Cox and 92% for F&G models.
+
+```{r simu-table}
+model_df %>% 
+  summarise(
+    real_estimate = unique(real_estimate),
+    p_signif = mean(p.value<0.05), 
+    ci_coverage = mean(conf.low<real_estimate & real_estimate<conf.high),
+    .by = c(model, event, term)
+  ) %>% 
+  mutate_if(is.numeric, ~round(.x, 2)) |> 
+  arrange(real_estimate, model)
+```
+
+And here, we can see the variation of the coefficient estimations:
+
+```{r simu-graph}
+model_df %>% 
+  ggplot() +
+  aes(y=estimate, x=event, fill=term) +
+  geom_hline(yintercept=c(0, 0.5), alpha=0.5) +
+  geom_boxplot() +
+  facet_wrap(~model) +
+  theme(legend.position="top")
+```
+
+<!-- SUPPLEMENTAL CODE with checks -->
+
+<!-- Not run by quarto -->
+
+```{r check}
+#| eval: false
+#| include: false
+
+
+
+EnvStats::eweibull(df$time_a) #shape=0.581, scale=8.399
+EnvStats::eweibull(df$time_b) #shape=0.583, scale=8.222
+
+#
+crosstable::meansd(df$x) #"~0 et ~1"
+crosstable::meansd(df$z) #"~0 et ~1"
+cor(df$x, df$z) #~0.5
+cor(df$time_a, df$time_b) #~0.05 à cause de r=0.5. Sinon ~0.
+
+mean(df$event=="Censored") #~14% of true censoring 
+count(df, event)
+# In the resulting data set, there were 4350 event A events, 4277 event B events, and 1391 truly censored observations (neither A nor B was observed).
+df %>% 
+  pivot_longer(starts_with("time_")) %>% 
+  ggplot(aes(x=value, color=name)) + geom_density(na.rm=TRUE) +
+  geom_vline(xintercept=8, lineevent="dotted") +
+  xlim(0,10) + 
+  theme_classic() + theme(legend.position="top")
+df %>% 
+  pivot_longer(c(x, z)) %>% 
+  ggplot(aes(x=value, color=name)) + geom_density(na.rm=TRUE) +
+  xlim(0,5) + 
+  theme_classic() + theme(legend.position="top")
+mean(df$time_a>8) #36% censorship
+
+tic("with var")
+x = get_models(df, name="models_1", variance=TRUE)
+toc()
+tic("without var")
+y = get_models(df, name="models_1", variance=FALSE)
+toc()
+
+
+
+models_1 = get_models(df, name="models_1")
+
+x = models_1 %>% imap_dfr(~{
+  broom::tidy(.x) %>% mutate(name=.y, .before=1) %>% separate("name", c("model", "event")) %>%
+    mutate(true_estimate = ifelse(term=="x" & event=="a" | term=="z" & event=="b", exp(-0.75), 0),
+           error_abs = estimate-true_estimate,
+           error_rel = percent((error_abs)/true_estimate))
+}) %>%
+  select(-c(statistic, p.value, std.error))
+# %>% arrange(event, term)
+x
+x %>% select(model, event, term, estimate) %>% arrange(model) %>% pivot_wider(names_from=model, values_from=estimate) %>%
+  mutate(true = ifelse(term=="x" & event=="a" | term=="z" & event=="b", exp(-0.75), 0))
+
+
+
+
+## Simulation 100x100 --------------------------------------------------------------------------
+
+#relance N fois les 4 modélisations sur n patients
+
+# samples à tester : ceiling(10^seq(1.5, 4, by=0.5))
+
+tic("rerun 100") #~4.5 sec
+tic("rerun 1000") #~45 sec
+tic("rerun 10000") #~455 sec
+N_runs = 1000
+N_sample = 100
+set.seed(1234)
+m_list = seq(N_runs) %>% 
+  map(~{
+    d = get_df(n=N_sample, seed=NULL)
+    get_models(d, use_cache=F)
+  })
+m_list2 = m_list %>% 
+  map_df(~{
+    .x %>% imap_dfr(~{
+      broom::tidy(.x) %>% 
+        mutate(name=.y, n=N_sample, .before=1) %>% 
+        separate("name", c("model", "event"))
+    })
+  }) 
+saveRDS(m_list, glue("sim_N-{N_runs}_n-{N_sample}.rds"))
+saveRDS(m_list2, glue("sim_rslt_N-{N_runs}_n-{N_sample}.rds"))
+toc()
+
+
+N_runs = 10000
+N_sample = 100
+data_list = seq(N_runs) %>% 
+  set_names(~paste0("seed",.x)) %>% 
+  map(.progress=TRUE, ~{
+    d = get_df(n=N_sample, seed=.x)
+  })
+object.size(data_list) %>% format("auto")
+saveRDS(m_list, glue("sim_N-{N_runs}_n-{N_sample}.rds"))
+saveRDS(m_list2, glue("sim_rslt_N-{N_runs}_n-{N_sample}.rds"))
+
+
+## Analyse ----
+
+m_list = readRDS("sim_N-10000_n-100.rds")
+m_list2 = readRDS("sim_rslt_N-10000_n-100.rds")
+
+  
+m_list2 = m_list2 %>% mutate(true_var = paste0(event, term) %in% c("ax", "bz"))
+
+m_list2 %>% count(model, event, term) 
+
+m_list2 %>% 
+  ggplot(aes(x=p.value, color=model)) + 
+  geom_density() +
+  facet_wrap(event~term, scales="free")
+m_list2 %>% 
+  ggplot(aes(x=event, color=model, y=estimate)) + 
+  geom_hline(yintercept=c(exp(-0.75), 0)) +
+  geom_boxplot() + 
+  facet_wrap(~term, scales="free")
+
+
+pd=position_dodge(0.9)
+m_list2_s = m_list2 %>% 
+  group_by(model, event, term, true_var) %>% 
+  summarise(
+    signif=mean(p.value<0.05), 
+    signif_ci=list(PropCIs::scoreci(x=sum(p.value<0.05), n=n(), conf.level=0.95)$conf.int), 
+    signif_ci_inf=map_dbl(signif_ci, 1),
+    signif_ci_sup=map_dbl(signif_ci, 2),
+  )
+m_list2_s %>% 
+  ggplot(aes(x=event, fill=model, y=signif, ymin=signif_ci_inf, ymax=signif_ci_sup)) + 
+  geom_col(position=pd) + 
+  geom_errorbar(position=pd, width=0.2) + 
+  geom_hline(yintercept=0.05) +
+  facet_wrap(~term) + 
+  ggtitle("Pourcentage of significant runs (95%CI)", sub="Gives alpha and beta risks") + 
+  scale_y_percent(limits=c(0,1))
+
+
+m_list2 %>% 
+  group_by(model, true_var) %>% 
+  summarise(
+    signif=mean(p.value<0.05), 
+    signif_ci=list(PropCIs::scoreci(x=sum(p.value<0.05), n=n(), conf.level=0.95)$conf.int), 
+    signif_ci_inf=map_dbl(signif_ci, 1),
+    signif_ci_sup=map_dbl(signif_ci, 2),
+  ) %>% 
+  ggplot(aes(x=true_var, fill=model, y=signif, ymin=signif_ci_inf, ymax=signif_ci_sup)) + 
+  geom_col(position=pd) + 
+  geom_errorbar(position=pd, width=0.2) + 
+  geom_hline(yintercept=0.05) +
+  # facet_wrap(~term) + 
+  ggtitle("Pourcentage of significant runs (95%CI)", sub="Gives alpha and beta risks") + 
+  scale_y_percent(limits=c(0,1))
+
+# With informative censoring ----------------------------------------------
+
+df2 = get_df(inf_censoring=TRUE)
+models_2 = get_models(df2, name="models_2")
+
+
+
+
+
+
+
+fg_a = cmprsk::crr(df$t, df$event, cbind(x=df$x, z=df$z), failcode="Type A", cencode="Censored")
+fg_b = cmprsk::crr(df$t, df$event, cbind(x=df$x, z=df$z), failcode="Type B", cencode="Censored")
+cox_a = coxph(Surv(t, event=="Type A") ~ x + z, data=df)
+cox_b = coxph(Surv(t, event=="Type B") ~ x + z, data=df)
+
+models_2 %>% imap_dfr(~{
+  broom::tidy(.x) %>% mutate(name=.y, .before=1)
+}) %>% arrange(term)
+
+
+
+df %>% select(time_a, time_b, t, event)
+
+cox_true_a = coxph(Surv(ta, time_a<8) ~ x + z, data=df)
+cox_true_b = coxph(Surv(tb, time_b<8) ~ x + z, data=df)
+
+xx=cmprsk::crr(df$t, df$event, cbind(x=df$x, z=df$z), failcode="Type B", cencode="Censored")
+
+
+fg_as = broom::tidy(fg_a) %>%
+  mutate(model="F&G", .before=1,
+         event = "Type A")
+fg_bs = broom::tidy(fg_b) %>%
+  mutate(model="F&G", .before=1,
+         event = "Type B")
+cox_as = cox_a %>% broom::tidy() %>%
+  mutate(model="Cox", .before=1,
+         event = "Type A")
+cox_bs = cox_b%>% broom::tidy() %>%
+  mutate(model="Cox", .before=1,
+         event = "Type B")
+
+bind_rows(cox_as, fg_as, cox_bs, fg_bs) %>% arrange(term)
+
+
+summary(cox_a)
+summary(fg_a)
+summary(cox_b)
+summary(fg_b)
+
+
+# Plots -------------------------------------------------------------------
+
+
+#kaplan-meier on variables X and Z
+#work on both event A and B because of the correlation -> we need a Cox regression
+al = list(
+  "Type A, var X" = survfit(Surv(t, event=="Type A") ~ x>0, data=df),
+  "Type A, var Z" = survfit(Surv(t, event=="Type A") ~ z>0, data=df)
+)
+plot_a = ggsurvplot(al, pval=TRUE) %>% map("plot") %>% wrap_plots()
+
+bl = list(
+  "Type B, var X" = survfit(Surv(t, event=="Type B") ~ x>0, data=df),
+  "Type B, var Z" = survfit(Surv(t, event=="Type B") ~ z>0, data=df)
+)
+plot_b = ggsurvplot(bl, pval=TRUE) %>% map("plot") %>% wrap_plots()
+wrap_plots(plot_a, plot_b, nrow=2)
+
+
+
+
+dfp = get_df(400)
+a = survfit(Surv(t, event=="Type A") ~ x>0, data=dfp)
+ggsurvplot(a, data=df)
+
+
+
+# Tests -------------------------------------------------------------------
+
+test_coef = replicate(1000, {
+  coxph(Surv(ta, time_a<8) ~ x + z, data=get_df())
+}, simplify=FALSE)
+test_coef %>% map_df(coef) %>% map_chr(meansd) #coef = 0.5 for X et ~0 for Z
+
+
+
+test_time_correlation = replicate(1000, {
+  df = get_df()
+  cor(df$time_a, df$time_b)
+}, simplify=FALSE)
+unlist(test_time_correlation) %>% meansd #1e-4 (0.01)
+
+
+test_time_correlation2 = replicate(1000, {
+  df = get_df(inf_censoring=TRUE)
+  cor(df$time_a, df$time_b)
+}, simplify=FALSE)
+unlist(test_time_correlation2) %>% meansd #0.30 (0.17)
+
+
+#seed optimisation to approach the numbers in the article
+#NB : there is an error in the article, as 1391+4350+4277=10018
+min_diff = Inf
+for(i in 1:1000){
+  set.seed(i)
+  df = get_df()
+  diff = sum(abs(count(df, event)$n-c(1391, 4350, 4277)))
+  if(diff<=min_diff){
+    cat(i, "-", diff, "\n")
+    min_diff = diff
+    min_diff_l=list(diff=diff, count=count(df, event), seed=i)
+  }
+}
+
+
+```
