@@ -32,4 +32,6 @@ format:
   html:
     theme: cosmo
     css: styles.css
+    monofont: Fira Code, consolas, courier, monospace
+    df-print: paged
 
