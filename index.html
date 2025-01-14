@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.6.33">
+<meta name="generator" content="quarto-1.6.40">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -38,10 +38,10 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-07ba0ad10f5680c660e360ac31d2f3b6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-549806ee2085284f45b00abea8c6df48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-9b40e61faef5fdc6c07d81d49a73c0b6.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-6c5696c8b04138f86a3c33ef72ffe8fe.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -132,15 +132,15 @@ window.Quarto = {
 <link rel="stylesheet" href="styles.css">
 <link rel="alternate" type="application/rss+xml" title="Hello, R!" href="index.xml" data-external="1"><meta property="og:title" content="Hello, R!">
 <meta property="og:description" content="An R blog by Dan Chaltiel">
-<meta property="og:image" content="https://danchaltiel.github.io/blog/posts/2025-01_20_article_replication/spiderman.jpg">
+<meta property="og:image" content="https://danchaltiel.github.io/blog/posts/2025-01_13_competing_risks/toystory.jpeg">
 <meta property="og:site_name" content="Hello, R!">
-<meta property="og:image:alt" content="Double pointing spiderman">
+<meta property="og:image:alt" content="Competing risks everywhere">
 <meta name="twitter:title" content="Hello, R!">
 <meta name="twitter:description" content="An R blog by Dan Chaltiel">
-<meta name="twitter:image" content="https://danchaltiel.github.io/blog/posts/2025-01_20_article_replication/spiderman.jpg">
+<meta name="twitter:image" content="https://danchaltiel.github.io/blog/posts/2025-01_13_competing_risks/toystory.jpeg">
 <meta name="twitter:creator" content="@DanChaltiel">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image:alt" content="Double pointing spiderman">
+<meta name="twitter:image:alt" content="Competing risks everywhere">
 </head>
 
 <body class="nav-fixed">
@@ -225,7 +225,7 @@ window.Quarto = {
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
         
-    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(4)</span></div><div class="category" data-category="Ug==">R <span class="quarto-category-count">(3)</span></div><div class="category" data-category="YW5hbHlzaXM=">analysis <span class="quarto-category-count">(2)</span></div><div class="category" data-category="Ymlhcw==">bias <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Y29kZQ==">code <span class="quarto-category-count">(3)</span></div><div class="category" data-category="bmV3cw==">news <span class="quarto-category-count">(1)</span></div><div class="category" data-category="c2ltdWxhdGlvbg==">simulation <span class="quarto-category-count">(2)</span></div><div class="category" data-category="c3Vydml2YWw=">survival <span class="quarto-category-count">(2)</span></div></div></div>
+    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(3)</span></div><div class="category" data-category="Ug==">R <span class="quarto-category-count">(2)</span></div><div class="category" data-category="YW5hbHlzaXM=">analysis <span class="quarto-category-count">(2)</span></div><div class="category" data-category="Ymlhcw==">bias <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Y29kZQ==">code <span class="quarto-category-count">(2)</span></div><div class="category" data-category="bmV3cw==">news <span class="quarto-category-count">(1)</span></div><div class="category" data-category="c2ltdWxhdGlvbg==">simulation <span class="quarto-category-count">(1)</span></div><div class="category" data-category="c3Vydml2YWw=">survival <span class="quarto-category-count">(1)</span></div></div></div>
 <!-- main -->
 <main class="content quarto-banner-title-block column-page-left" id="quarto-document-content">
 
@@ -239,49 +239,7 @@ window.Quarto = {
 
 <div class="quarto-listing quarto-listing-container-default" id="listing-listing">
 <div class="list quarto-listing-default">
-<div class="quarto-post image-right" data-index="0" data-categories="Uixjb2RlLHNpbXVsYXRpb24sc3Vydml2YWw=" data-listing-date-sort="1737327600000" data-listing-file-modified-sort="1736712706978" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="15" data-listing-word-count-sort="2939">
-<div class="thumbnail">
-<p><a href="./posts/2025-01_20_article_replication/index.html" class="no-external"></a></p><a href="./posts/2025-01_20_article_replication/index.html" class="no-external">
-<p><img loading="lazy" src="./posts/2025-01_20_article_replication/spiderman.jpg" class="thumbnail-image" alt="Double pointing spiderman"></p>
-</a><p><a href="./posts/2025-01_20_article_replication/index.html" class="no-external"></a></p>
-</div>
-<div class="body">
-<h3 class="no-anchor listing-title">
-<a href="./posts/2025-01_20_article_replication/index.html" class="no-external">Replicate a figure from an article</a>
-</h3>
-<div class="listing-subtitle">
-<a href="./posts/2025-01_20_article_replication/index.html" class="no-external"></a>
-</div>
-<div class="listing-categories">
-<div class="listing-category" onclick="window.quartoListingCategory('Ug=='); return false;">
-R
-</div>
-<div class="listing-category" onclick="window.quartoListingCategory('Y29kZQ=='); return false;">
-code
-</div>
-<div class="listing-category" onclick="window.quartoListingCategory('c2ltdWxhdGlvbg=='); return false;">
-simulation
-</div>
-<div class="listing-category" onclick="window.quartoListingCategory('c3Vydml2YWw='); return false;">
-survival
-</div>
-</div>
-<div class="listing-description">
-<a href="./posts/2025-01_20_article_replication/index.html" class="no-external">How to simulate survival data so we can play with it </a>
-</div>
-</div>
-<div class="metadata">
-<a href="./posts/2025-01_20_article_replication/index.html" class="no-external">
-<div class="listing-date">
-Jan 20, 2025
-</div>
-<div class="listing-author">
-Dan Chaltiel
-</div>
-</a>
-</div>
-</div>
-<div class="quarto-post image-right" data-index="1" data-categories="Uixjb2RlLGFuYWx5c2lzLHN1cnZpdmFs" data-listing-date-sort="1736722800000" data-listing-file-modified-sort="1736797636773" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="13" data-listing-word-count-sort="2528">
+<div class="quarto-post image-right" data-index="0" data-categories="UiUyQ2NvZGUlMkNhbmFseXNpcyUyQ3N1cnZpdmFs" data-listing-date-sort="1736726400000" data-listing-file-modified-sort="1736840908158" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="13" data-listing-word-count-sort="2528">
 <div class="thumbnail">
 <p><a href="./posts/2025-01_13_competing_risks/index.html" class="no-external"></a></p><a href="./posts/2025-01_13_competing_risks/index.html" class="no-external">
 <p><img loading="lazy" src="./posts/2025-01_13_competing_risks/toystory.jpeg" class="thumbnail-image" alt="Competing risks everywhere"></p>
@@ -323,7 +281,7 @@ Dan Chaltiel
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="2" data-categories="Uixjb2RlLGFuYWx5c2lzLHNpbXVsYXRpb24sYmlhcw==" data-listing-date-sort="1736118000000" data-listing-file-modified-sort="1736797636287" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="17" data-listing-word-count-sort="3231">
+<div class="quarto-post image-right" data-index="1" data-categories="UiUyQ2NvZGUlMkNhbmFseXNpcyUyQ3NpbXVsYXRpb24lMkNiaWFz" data-listing-date-sort="1736121600000" data-listing-file-modified-sort="1736840908050" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="17" data-listing-word-count-sort="3231">
 <div class="thumbnail">
 <p><a href="./posts/2025-01_06_adjustment/index.html" class="no-external"></a></p><a href="./posts/2025-01_06_adjustment/index.html" class="no-external">
 <p><img loading="lazy" src="./posts/2025-01_06_adjustment/one_does_not_simply.jpg" class="thumbnail-image" alt="One does not simply adjust on all covariates"></p>
@@ -368,7 +326,7 @@ Dan Chaltiel
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="3" data-categories="bmV3cw==" data-listing-date-sort="1735945200000" data-listing-file-modified-sort="1736797636272" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="37">
+<div class="quarto-post image-right" data-index="2" data-categories="bmV3cw==" data-listing-date-sort="1735948800000" data-listing-file-modified-sort="1736840908049" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="1" data-listing-word-count-sort="37">
 <div class="thumbnail">
 <p><a href="./posts/2025-01_01_welcome/index.html" class="no-external"></a></p><a href="./posts/2025-01_01_welcome/index.html" class="no-external">
 <p><img loading="lazy" src="./posts/2025-01_01_welcome/keep_calm.jpeg" class="thumbnail-image" alt="Keep calm and use R"></p>
@@ -488,8 +446,6 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   });
   clipboard.on('success', onCopySuccess);
   if (window.document.getElementById('quarto-embedded-source-code-modal')) {
-    // For code content inside modals, clipBoardJS needs to be initialized with a container option
-    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
     const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
       text: getTextToCopy,
       container: window.document.getElementById('quarto-embedded-source-code-modal')
@@ -600,7 +556,6 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       if (window.Quarto?.typesetMath) {
         window.Quarto.typesetMath(note);
       }
-      // TODO in 1.5, we should make sure this works without a callout special case
       if (note.classList.contains("callout")) {
         return note.outerHTML;
       } else {
