@@ -7,6 +7,8 @@
 .DS_Store
 .quarto
 
+docs
+
 cache
 *draft*
 
