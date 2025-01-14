@@ -20,6 +20,16 @@ website:
     right:
       - text: About me
         href: about.qmd
+      - text: My packages
+        menu:
+        - href: https://github.com/DanChaltiel/crosstable?tab=readme-ov-file#crosstable-
+          text: crosstable
+        - href: https://github.com/DanChaltiel/EDCimport?tab=readme-ov-file#edcimport
+          text: EDCimport
+        - href: https://github.com/DanChaltiel/autoimport?tab=readme-ov-file#autoimport
+          text: autoimport
+        - href: https://github.com/DanChaltiel/nih.joinpoint?tab=readme-ov-file#nihjoinpoint
+          text: nih.joinpoint
       - icon: github
         href: https://github.com/DanChaltiel
       - icon: bluesky
