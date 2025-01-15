@@ -2,22 +2,26 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://danchaltiel.github.io/blog/index.html</loc>
-    <lastmod>2025-01-14T11:16:38.480Z</lastmod>
+    <lastmod>2025-01-15T18:49:39.238Z</lastmod>
   </url>
   <url>
-    <loc>https://danchaltiel.github.io/blog/posts/2025-01_13_competing_risks/index.html</loc>
-    <lastmod>2025-01-14T11:16:38.589Z</lastmod>
-  </url>
-  <url>
-    <loc>https://danchaltiel.github.io/blog/about.html</loc>
-    <lastmod>2025-01-14T11:16:38.477Z</lastmod>
+    <loc>https://danchaltiel.github.io/blog/posts/2025-01_20_article_replication/index.html</loc>
+    <lastmod>2025-01-15T18:49:39.370Z</lastmod>
   </url>
   <url>
     <loc>https://danchaltiel.github.io/blog/posts/2025-01_06_adjustment/index.html</loc>
-    <lastmod>2025-01-14T11:16:38.481Z</lastmod>
+    <lastmod>2025-01-15T18:49:39.238Z</lastmod>
+  </url>
+  <url>
+    <loc>https://danchaltiel.github.io/blog/about.html</loc>
+    <lastmod>2025-01-15T18:49:39.235Z</lastmod>
+  </url>
+  <url>
+    <loc>https://danchaltiel.github.io/blog/posts/2025-01_13_competing_risks/index.html</loc>
+    <lastmod>2025-01-15T18:49:39.359Z</lastmod>
   </url>
   <url>
     <loc>https://danchaltiel.github.io/blog/posts/2025-01_01_welcome/index.html</loc>
-    <lastmod>2025-01-14T11:16:38.480Z</lastmod>
+    <lastmod>2025-01-15T18:49:39.238Z</lastmod>
   </url>
 </urlset>
